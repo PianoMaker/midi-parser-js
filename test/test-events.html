@@ -1,0 +1,54 @@
+<html>
+<head>
+<script src="../src/main.js"></script>
+<script>
+    window.onload = function(){
+        var source = document.getElementById('filereader');
+        MidiParser.parse(source, function(midiObj){
+            if (!midiObj || !midiObj.track) return;
+            let events = [];
+            // Для кожного треку підраховуємо абсолютний час і збираємо NoteOn/NoteOff
+            midiObj.track.forEach(function(track) {
+                let absTime = 0;
+                track.event.forEach(function(event) {
+                    absTime += event.deltaTime || 0;
+                    if (event.type === 0x9 || event.type === 0x8) {
+                        events.push({
+                            type: event.type === 0x9 ? 'NoteOn' : 'NoteOff',
+                            channel: event.channel,
+                            data: event.data,
+                            absoluteTime: absTime
+                        });
+                    }
+                });
+            });
+            // Сортуємо всі події за абсолютним часом
+            events.sort(function(a, b) { return a.absoluteTime - b.absoluteTime; });
+            // Формуємо HTML-таблицю
+            let html = '<table border="1" style="font-size:12px;"><tr><th>Type</th><th>Channel</th><th>Note</th><th>Velocity</th><th>Absolute Ticks</th></tr>';
+            events.forEach(function(ev) {
+                html += '<tr>' +
+                    '<td>' + ev.type + '</td>' +
+                    '<td>' + ev.channel + '</td>' +
+                    '<td>' + (ev.data && ev.data[0] !== undefined ? ev.data[0] : '') + '</td>' +
+                    '<td>' + (ev.data && ev.data[1] !== undefined ? ev.data[1] : '') + '</td>' +
+                    '<td>' + ev.absoluteTime + '</td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            document.getElementById("output").innerHTML = html;
+        });
+    };
+</script>
+</head>
+<body>
+    <div style="background:grey; padding:20px;">
+        <h3>MIDI Note Events: NoteOn/NoteOff (Absolute Ticks)</h3>
+        <input type="file" id="filereader"/>
+    </div>
+    <div style="background:lightgrey; padding:20px;">
+        <h3>Note Events Output :</h3>
+        <div id="output" style="font-size:10px;">-select a .mid file-</div>
+    </div>
+</body>
+</html>
